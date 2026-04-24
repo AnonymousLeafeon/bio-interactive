@@ -3,367 +3,297 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>H2 Biology: Translation Simulator</title>
+    <title>H2 Biology: Translation Model</title>
     <style>
         :root {
-            --ribosome-color: #ffeb3b;
-            --mrna-color: #4caf50;
-            --trna-color: #2196f3;
-            --aa-color: #f44336;
-            --text-main: #333;
+            --site-width: 90px;
+            --ribosome-bg: #fff9c4;
+            --mrna-bg: #c8e6c9;
+            --trna-color: #64b5f6;
+            --aa-color: #ff8a80;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            background-color: #f0f2f5;
-            color: var(--text-main);
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f4f8;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
+            margin: 0;
+            padding: 10px;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+        .header { text-align: center; max-width: 500px; }
+        h1 { font-size: 1.4rem; color: #1a237e; margin-bottom: 5px; }
+        p { font-size: 0.85rem; color: #444; }
 
-        h1 { color: #1a237e; margin-bottom: 5px; font-size: 1.5rem; }
-        p { font-size: 0.9rem; color: #555; max-width: 500px; }
-
-        /* Simulation Box */
-        #game-container {
-            width: 100%;
-            max-width: 600px;
+        /* Ribosome Layout */
+        #ribosome-container {
+            position: relative;
+            width: 320px;
+            height: 380px;
             background: white;
             border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            overflow: hidden;
-            position: relative;
-            padding-bottom: 20px;
-        }
-
-        /* The Ribosome Model */
-        #visualizer {
-            height: 300px;
-            position: relative;
-            background: #e3f2fd;
-            border-bottom: 4px solid #ddd;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            margin-top: 20px;
             overflow: hidden;
         }
 
-        .ribosome-large {
+        /* The Large Subunit Site Markers */
+        .large-subunit {
             position: absolute;
-            bottom: 60px;
+            top: 40px;
             left: 50%;
             transform: translateX(-50%);
             width: 280px;
-            height: 180px;
-            background: var(--ribosome-color);
-            border-radius: 100px 100px 20px 20px;
+            height: 220px;
+            background: var(--ribosome-bg);
             border: 4px solid #fbc02d;
+            border-radius: 100px 100px 20px 20px;
+            display: flex;
             z-index: 1;
         }
 
-        .epa-sites {
+        .site {
+            flex: 1;
+            border-right: 2px dashed #fbc02d;
             display: flex;
-            justify-content: space-around;
-            padding-top: 40px;
-            font-weight: bold;
-            color: #d4a017;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 10px;
         }
+        .site:last-child { border-right: none; }
+        .site-label { font-weight: bold; color: #f57f17; font-size: 1.2rem; }
 
-        .site-label { font-size: 1.2rem; }
-
-        .mrna-strand {
+        /* mRNA logic */
+        .mrna-track {
             position: absolute;
-            bottom: 30px;
-            width: 200%;
-            height: 30px;
-            background: var(--mrna-color);
+            top: 260px;
+            height: 40px;
+            background: var(--mrna-bg);
             display: flex;
-            transition: left 0.5s ease;
+            transition: left 0.6s cubic-bezier(0.45, 0.05, 0.55, 0.95);
             z-index: 2;
+            padding: 0 10px;
         }
 
         .codon {
-            width: 60px;
-            height: 100%;
-            border-right: 1px solid white;
+            width: var(--site-width);
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
-            color: white;
+            align-items: center;
             font-family: monospace;
-            font-size: 0.8rem;
             font-weight: bold;
+            font-size: 1.1rem;
+            color: #2e7d32;
+            border-left: 1px solid rgba(0,0,0,0.1);
         }
 
-        /* tRNA Component */
+        /* tRNA logic */
         .trna {
             position: absolute;
-            width: 50px;
-            height: 100px;
-            bottom: 80px;
-            transition: all 0.5s ease;
-            z-index: 5;
+            width: var(--site-width);
+            height: 150px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            transition: all 0.6s ease;
+            z-index: 10;
         }
 
         .amino-acid {
-            width: 30px;
-            height: 30px;
+            width: 38px;
+            height: 38px;
             background: var(--aa-color);
+            border: 2px solid #d32f2f;
             border-radius: 50%;
-            color: white;
             display: flex;
-            align-items: center;
             justify-content: center;
-            font-size: 0.6rem;
-            border: 2px solid #b71c1c;
+            align-items: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 2px;
+            transition: transform 0.4s ease;
         }
 
-        .trna-body {
-            width: 4px;
-            height: 40px;
+        .trna-arm {
+            width: 6px;
+            height: 60px;
             background: var(--trna-color);
         }
 
-        .anticodon-box {
+        .anticodon {
             background: var(--trna-color);
             color: white;
-            padding: 2px 5px;
-            font-size: 0.7rem;
-            border-radius: 3px;
+            padding: 4px 8px;
+            border-radius: 4px 4px 0 0;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 1rem;
+            /* This ensures it touches the mRNA */
+            margin-top: -2px; 
         }
 
-        /* Controls */
+        /* UI Controls */
         .controls {
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+            width: 320px;
+            padding: 15px;
+            background: #fff;
+            margin-top: 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
 
-        .info-panel {
-            background: #fff9c4;
+        .status-box {
+            background: #e8f5e9;
             padding: 10px;
-            border-radius: 8px;
-            border-left: 5px solid #fbc02d;
+            border-left: 4px solid #4caf50;
             font-size: 0.85rem;
+            margin-bottom: 10px;
             min-height: 60px;
         }
 
-        .btn-group {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
         button {
-            flex: 1;
+            width: 100%;
             padding: 12px;
-            border: none;
-            border-radius: 8px;
             background: #1a237e;
             color: white;
+            border: none;
+            border-radius: 5px;
             font-weight: bold;
             cursor: pointer;
-            transition: background 0.2s;
         }
+        button:disabled { background: #9fa8da; }
 
-        button:disabled { background: #ccc; }
-        button:active { transform: scale(0.98); }
-
-        .syllabus-note {
-            margin-top: 15px;
-            font-size: 0.75rem;
-            color: #777;
-            text-align: center;
-        }
-
-        /* Animations */
-        @keyframes float {
-            0% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-            100% { transform: translateY(0); }
+        .peptide-link {
+            position: absolute;
+            width: 20px;
+            height: 4px;
+            background: #333;
+            z-index: 11;
         }
     </style>
 </head>
 <body>
 
-<header>
-    <h1>Translation Visualizer</h1>
-    <p>Singapore H2 Biology (9744) - From mRNA to Polypeptide</p>
-</header>
+<div class="header">
+    <h1>Interactive Translation</h1>
+    <p>H2 Biology: mRNA → Polypeptide (EPA Model)</p>
+</div>
 
-<div id="game-container">
-    <div id="visualizer">
-        <!-- Large Ribosomal Subunit -->
-        <div class="ribosome-large">
-            <div class="epa-sites">
-                <div class="site-label">E</div>
-                <div class="site-label">P</div>
-                <div class="site-label">A</div>
-            </div>
-        </div>
-
-        <!-- mRNA Strand -->
-        <div class="mrna-strand" id="mrna">
-            <!-- Codons injected by JS -->
-        </div>
-
-        <!-- tRNAs will be injected here -->
-        <div id="trna-layer"></div>
+<div id="ribosome-container">
+    <div class="large-subunit">
+        <div class="site"><span class="site-label">E</span></div>
+        <div class="site"><span class="site-label">P</span></div>
+        <div class="site"><span class="site-label">A</span></div>
     </div>
 
-    <div class="controls">
-        <div class="info-panel" id="status-text">
-            Press "Start" to begin translation at the Start Codon (AUG).
-        </div>
+    <!-- tRNAs will be injected here -->
+    <div id="tRNA-layer"></div>
 
-        <div class="btn-group">
-            <button id="next-btn" onclick="nextStep()">Start Initiation</button>
-            <button onclick="resetSim()" style="background:#555;">Reset</button>
-        </div>
+    <div class="mrna-track" id="mrna" style="left: 20px;">
+        <!-- Codons injected by JS -->
     </div>
 </div>
 
-<div class="syllabus-note">
-    <strong>Key Concepts:</strong> Complementary Base Pairing (A-U, G-C), Peptidyl Transferase, 5' to 3' movement.
+<div class="controls">
+    <div class="status-box" id="status">
+        <b>Pre-Initiation:</b> The small ribosomal subunit binds to mRNA. Click 'Start' to bring the initiator tRNA to the P-site.
+    </div>
+    <button id="btn-next" onclick="processStep()">Start Initiation</button>
 </div>
 
 <script>
-    const sequence = ["AUG", "UUU", "GGC", "UAA"];
-    const aminoMap = { "AUG": "Met", "UUU": "Phe", "GGC": "Gly", "UAA": "STOP" };
-    const antiMap = { "AUG": "UAC", "UUU": "AAA", "GGC": "CCG", "UAA": "---" };
+    const codons = ["AUG", "UUU", "GGC", "UAA"];
+    const antis = ["UAC", "AAA", "CCG", "---"];
+    const aminos = ["Met", "Phe", "Gly", "STOP"];
 
     let step = 0;
-    let currentCodonIdx = 0;
     const mrnaEl = document.getElementById('mrna');
-    const statusEl = document.getElementById('status-text');
-    const nextBtn = document.getElementById('next-btn');
-    const trnaLayer = document.getElementById('trna-layer');
+    const trnaLayer = document.getElementById('tRNA-layer');
+    const statusEl = document.getElementById('status');
+    const btnNext = document.getElementById('btn-next');
 
-    // Initialize mRNA
+    // Site X-Positions (Relative to container)
+    const POS = { E: 25, P: 115, A: 205 };
+
     function init() {
-        mrnaEl.innerHTML = '';
-        sequence.forEach(c => {
+        codons.forEach(c => {
             const div = document.createElement('div');
             div.className = 'codon';
-            div.innerHTML = `<span>${c}</span>`;
+            div.innerText = c;
             mrnaEl.appendChild(div);
         });
-        mrnaEl.style.left = "160px"; // Start position aligned with P site
     }
 
-    function nextStep() {
-        if (step === 0) {
-            initiation();
-        } else if (step === 1) {
-            elongationA();
-        } else if (step === 2) {
-            peptideBond();
-        } else if (step === 3) {
-            translocation();
-        } else if (step === 4) {
-            termination();
-        }
-    }
+    function spawnTRNA(index, site) {
+        const t = document.createElement('div');
+        t.className = 'trna';
+        t.id = `trna-${index}`;
+        t.style.left = POS[site] + "px";
+        t.style.top = "112px"; // Perfectly aligns anticodon to mRNA
 
-    function initiation() {
-        statusEl.innerHTML = "<strong>Initiation:</strong> Small subunit binds to mRNA. Initiator tRNA (carrying Met) binds to the <b>P-site</b> via complementary base pairing between AUG codon and UAC anticodon.";
-        
-        spawnTRNA(0, "P");
-        nextBtn.innerText = "Next: Elongation (A-site)";
-        step = 1;
-    }
-
-    function elongationA() {
-        currentCodonIdx++;
-        if (sequence[currentCodonIdx] === "UAA") {
-            step = 4;
-            nextStep();
-            return;
-        }
-
-        statusEl.innerHTML = "<strong>Elongation:</strong> The next aminoacyl-tRNA binds to the <b>A-site</b>. Its anticodon matches the mRNA codon.";
-        spawnTRNA(currentCodonIdx, "A");
-        nextBtn.innerText = "Next: Peptide Bond";
-        step = 2;
-    }
-
-    function peptideBond() {
-        statusEl.innerHTML = "<strong>Peptide Bond:</strong> Peptidyl transferase (rRNA in large subunit) catalyses a peptide bond between amino acids. The chain moves to the A-site tRNA.";
-        
-        // Visual logic: Move P-site AA to A-site AA
-        const tRNAs = document.querySelectorAll('.trna');
-        const pTRNA = tRNAs[tRNAs.length - 2];
-        const aTRNA = tRNAs[tRNAs.length - 1];
-        
-        const pAA = pTRNA.querySelector('.amino-acid');
-        pAA.style.transition = "all 0.5s ease";
-        pAA.style.transform = "translate(70px, -10px)";
-        
-        nextBtn.innerText = "Next: Translocation";
-        step = 3;
-    }
-
-    function translocation() {
-        statusEl.innerHTML = "<strong>Translocation:</strong> Ribosome moves 5' to 3'. tRNA in P-site moves to E-site and exits. tRNA in A-site moves to P-site.";
-        
-        // Move mRNA
-        const currentLeft = parseInt(mrnaEl.style.left);
-        mrnaEl.style.left = (currentLeft - 70) + "px";
-
-        // Move tRNAs
-        const tRNAs = document.querySelectorAll('.trna');
-        tRNAs.forEach(t => {
-            const pos = parseInt(t.style.left);
-            t.style.left = (pos - 70) + "px";
-            if (pos - 70 < 100) { // E-site exit logic
-                t.style.opacity = "0";
-                setTimeout(() => t.remove(), 500);
-            }
-        });
-
-        nextBtn.innerText = "Next: Continue Elongation";
-        step = 1;
-    }
-
-    function termination() {
-        statusEl.innerHTML = "<strong>Termination:</strong> Stop codon (UAA) is reached. A release factor binds to A-site. The polypeptide is hydrolyzed and the complex dissociates.";
-        nextBtn.disabled = true;
-        nextBtn.innerText = "Finished";
-    }
-
-    function spawnTRNA(idx, site) {
-        const trna = document.createElement('div');
-        trna.className = 'trna';
-        const leftPos = site === "P" ? 175 : 245;
-        trna.style.left = leftPos + "px";
-        
-        trna.innerHTML = `
-            <div class="amino-acid">${aminoMap[sequence[idx]]}</div>
-            <div class="trna-body"></div>
-            <div class="anticodon-box">${antiMap[sequence[idx]]}</div>
+        t.innerHTML = `
+            <div class="amino-acid" id="aa-${index}">${aminos[index]}</div>
+            <div class="trna-arm"></div>
+            <div class="anticodon">${antis[index]}</div>
         `;
-        
-        trnaLayer.appendChild(trna);
+        trnaLayer.appendChild(t);
+        return t;
     }
 
-    function resetSim() {
-        step = 0;
-        currentCodonIdx = 0;
-        trnaLayer.innerHTML = '';
-        nextBtn.disabled = false;
-        nextBtn.innerText = "Start Initiation";
-        statusEl.innerText = 'Press "Start" to begin.';
-        init();
+    function processStep() {
+        switch(step) {
+            case 0: // Initiation
+                spawnTRNA(0, 'P');
+                statusEl.innerHTML = "<b>Initiation:</b> Initiator tRNA (Met) binds to <b>AUG</b> codon at the <b>P-site</b> via complementary base pairing.";
+                btnNext.innerText = "Next: Elongation (A-site entry)";
+                step++;
+                break;
+
+            case 1: // Elongation - A site
+                spawnTRNA(1, 'A');
+                statusEl.innerHTML = "<b>Elongation:</b> Next aminoacyl-tRNA (Phe) enters the <b>A-site</b>. Anticodon AAA pairs with UUU codon.";
+                btnNext.innerText = "Next: Peptide Bond Formation";
+                step++;
+                break;
+
+            case 2: // Peptide Bond
+                const met = document.getElementById('aa-0');
+                met.style.transform = "translate(90px, 0px)"; // Moves to A-site AA
+                statusEl.innerHTML = "<b>Peptidyl Transferase:</b> This ribozyme catalyzes a peptide bond. The Met is transferred to the tRNA in the A-site.";
+                btnNext.innerText = "Next: Translocation";
+                step++;
+                break;
+
+            case 3: // Translocation
+                // Move mRNA left
+                mrnaEl.style.left = "-70px"; 
+                
+                // Move tRNAs
+                const t0 = document.getElementById('trna-0');
+                const t1 = document.getElementById('trna-1');
+                
+                t0.style.left = POS.E + "px";
+                t0.style.opacity = "0.4";
+                
+                t1.style.left = POS.P + "px";
+
+                statusEl.innerHTML = "<b>Translocation:</b> Ribosome moves one codon 5' to 3'. Deacylated tRNA moves to <b>E-site</b> to exit. Peptidyl-tRNA moves to <b>P-site</b>.";
+                btnNext.innerText = "Next: Termination";
+                step++;
+                break;
+
+            case 4: // Termination
+                const tExit = document.getElementById('trna-0');
+                if(tExit) tExit.remove();
+                
+                statusEl.innerHTML = "<b>Termination:</b> Stop codon (UAA) reaches A-site. No tRNA binds; instead, a <b>Release Factor</b> binds, hydrolyzing the chain.";
+                btnNext.innerText = "Reset Simulation";
+                btnNext.onclick = () => location.reload();
+                break;
+        }
     }
 
     init();
